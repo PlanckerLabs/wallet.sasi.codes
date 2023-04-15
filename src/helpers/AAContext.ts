@@ -2,32 +2,32 @@ import { Wallet, ethers } from "ethers";
 import { Bundler, SoulWalletLib, IUserOpReceipt, UserOperation, ITransaction } from 'soul-wallet-lib';
 import { NumberLike, toNumber } from "soul-wallet-lib/dist/defines/numberLike";
 import { Utils } from "./Utils";
+import { JsonRpcProvider } from '@ethersproject/providers'
 
-
-const log_on = true;
-const log = (message?: any, ...optionalParams: any[]) => { if (log_on) console.log(message, ...optionalParams) };
-const entryPointAddress = '0x0576a174d229e3cfa37253523e645a78a0c91b57';
-const walletLogicAddress = '0x0F8065973c4F7AB41E739302152c5cB6aC7590BA';
-const bundlerUrl = "http://bundler-pol-mumbai.plancker.org/rpc"
-
-const walletFactoryAddressHas ="0xC544A5107d887c9df046Cd8C5fB9D61e7559c229"
-
-const provider = new ethers.providers.JsonRpcProvider("https://polygon-mumbai.g.alchemy.com/v2/MD-3rBtr93tbYyDY518rqsBGupOGuvOV")
-
-     
-const chainId = await (await provider.getNetwork()).chainId;
-
-
-const soulWalletLib = new SoulWalletLib(SoulWalletLib.Defines.SingletonFactoryAddress);
-       
-const bundler:Bundler = new soulWalletLib.Bundler(entryPointAddress, provider, bundlerUrl);
-await bundler.init();
-const slat = 0
 
 export class AAContext  {
+    entryPointAddress:string
+    walletLogicAddress:string
+    bundlerUrl:string
+    walletFactoryAddressHas:string
+    provider:JsonRpcProvider
+    chainId:any;
+    soulWalletLib:SoulWalletLib
+    bundler:Bundler
+    slat:number
+    log = (message?: any, ...optionalParams: any[]) => { console.log(message, ...optionalParams) };
     
     constructor () {
-        log("chainId:", chainId);
+        this.entryPointAddress = '0x0576a174d229e3cfa37253523e645a78a0c91b57';
+        this.walletLogicAddress = '0x0F8065973c4F7AB41E739302152c5cB6aC7590BA';
+        this.walletFactoryAddressHas ="0xC544A5107d887c9df046Cd8C5fB9D61e7559c229"
+        this.bundlerUrl = "http://bundler-pol-mumbai.plancker.org/rpc"
+        this.provider = new ethers.providers.JsonRpcProvider("https://polygon-mumbai.g.alchemy.com/v2/MD-3rBtr93tbYyDY518rqsBGupOGuvOV")
+        this.soulWalletLib = new SoulWalletLib(SoulWalletLib.Defines.SingletonFactoryAddress);
+        this.chainId = this.provider._network.chainId
+        this.slat = 0
+        this.bundler = new this.soulWalletLib.Bundler(this.entryPointAddress, this.provider, this.bundlerUrl);
+        
     }
 
     async estimateUserOperationGas(bundler: Bundler, userOp: UserOperation) {
@@ -41,27 +41,27 @@ export class AAContext  {
 
 
     async activateWallet(walletOwner:Wallet):Promise<string> {
-        
+        await this.bundler.init();
         const upgradeDelay = 30;
         const guardianDelay = 30;
 
-        const walletAddress = await soulWalletLib.calculateWalletAddress(
-            walletLogicAddress,
-            entryPointAddress,
+        const walletAddress = await this.soulWalletLib.calculateWalletAddress(
+            this.walletLogicAddress,
+            this.entryPointAddress,
             walletOwner.address,
             upgradeDelay,
             guardianDelay,
             SoulWalletLib.Defines.AddressZero,
-            slat
+            this.slat
         );
 
-        log('walletAddress: ' + walletAddress);
-        log('walletBalance: ' + await provider.getBalance(walletAddress), 'wei');
+        this.log('walletAddress: ' + walletAddress);
+        this.log('walletBalance: ' + await this.provider.getBalance(walletAddress), 'wei');
         
         //#region
-        const activateOp = soulWalletLib.activateWalletOp(
-            walletLogicAddress,
-            entryPointAddress,
+        const activateOp = this.soulWalletLib.activateWalletOp(
+            this.walletLogicAddress,
+            this.entryPointAddress,
             walletOwner.address,
             upgradeDelay,
             guardianDelay,
@@ -69,41 +69,41 @@ export class AAContext  {
             '0x',
             10000000000,// 100Gwei
             1000000000,// 10Gwei
-            slat
+            this.slat
         );
-        await this.estimateUserOperationGas(bundler, activateOp);
+        await this.estimateUserOperationGas(this.bundler, activateOp);
 
         const requiredPrefund = await (await activateOp.requiredPrefund()).requiredPrefund;
-        log('requiredPrefund: ', ethers.utils.formatEther(requiredPrefund));
+        this.log('requiredPrefund: ', ethers.utils.formatEther(requiredPrefund));
 
         await walletOwner.sendTransaction({
             to: walletAddress,
             value: requiredPrefund
         });
 
-        const balance = await provider.getBalance(walletAddress);
-        log('walletBalance: ' + balance, 'wei');
+        const balance = await this.provider.getBalance(walletAddress);
+        this.log('walletBalance: ' + balance, 'wei');
 
-        const userOpHash = activateOp.getUserOpHashWithTimeRange(entryPointAddress, chainId, walletOwner.address);
+        const userOpHash = activateOp.getUserOpHashWithTimeRange(this.entryPointAddress, this.chainId, walletOwner.address);
         activateOp.signWithSignature(
             walletOwner.address,
             Utils.signMessage(userOpHash, walletOwner.privateKey)
         );
 
-        const validation = await bundler.simulateValidation(activateOp);
+        const validation = await this.bundler.simulateValidation(activateOp);
         if (validation.status !== 0) {
             throw new Error(`error code:${validation.status}`);
         }
-        log(`simulateValidation result:`, validation);
-        const simulate = await bundler.simulateHandleOp(activateOp);
+        this.log(`simulateValidation result:`, validation);
+        const simulate = await this.bundler.simulateHandleOp(activateOp);
         if (simulate.status !== 0) {
             throw new Error(`error code:${simulate.status}`);
         }
-        log(`simulateHandleOp result:`, simulate);
+        this.log(`simulateHandleOp result:`, simulate);
 
         
         let activated = false;
-        const bundlerEvent = bundler.sendUserOperation(activateOp, 1000 * 60 * 5);
+        const bundlerEvent = this.bundler.sendUserOperation(activateOp, 1000 * 60 * 5);
         bundlerEvent.on('error', (err: any) => {
             console.log(err);
         });
@@ -123,16 +123,16 @@ export class AAContext  {
             await new Promise(r => setTimeout(r, 3000));
         }
         
-        const walletAddressCode = await provider.getCode(walletAddress);
-        log('walletAddressCode: ' + walletAddressCode);
+        const walletAddressCode = await this.provider.getCode(walletAddress);
+        this.log('walletAddressCode: ' + walletAddressCode);
 
         return walletAddress
     }
 
     async transferEth(walletOwner:Wallet, walletAddress:string, accounts:string[]) {
-
+        await this.bundler.init();
         
-        let nonce = await soulWalletLib.Utils.getNonce(walletAddress, provider);
+        let nonce = await this.soulWalletLib.Utils.getNonce(walletAddress, this.provider);
 
         const rawtx: ITransaction[] = [{
             from: walletAddress,
@@ -145,29 +145,29 @@ export class AAContext  {
             value: ethers.utils.parseEther('0.00002').toHexString(),
             data: '0x'
         }];
-        const ConvertedOP = soulWalletLib.Utils.fromTransaction(
+        const ConvertedOP = this.soulWalletLib.Utils.fromTransaction(
             rawtx,
             nonce,
             10000000000,// 100Gwei
             1000000000// 10Gwei
         );
-        await this.estimateUserOperationGas(bundler, ConvertedOP);
-        const ConvertedOPuserOpHash = ConvertedOP.getUserOpHashWithTimeRange(entryPointAddress, chainId, walletOwner.address);
+        await this.estimateUserOperationGas(this.bundler, ConvertedOP);
+        const ConvertedOPuserOpHash = ConvertedOP.getUserOpHashWithTimeRange(this.entryPointAddress, this.chainId, walletOwner.address);
         const ConvertedOPSignature = Utils.signMessage(ConvertedOPuserOpHash, walletOwner.privateKey)
 
         ConvertedOP.signWithSignature(walletOwner.address, ConvertedOPSignature);
-        let validation = await bundler.simulateValidation(ConvertedOP);
+        let validation = await this.bundler.simulateValidation(ConvertedOP);
         if (validation.status !== 0) {
             throw new Error(`error code:${validation.status}`);
         }
-        let simulate = await bundler.simulateHandleOp(ConvertedOP);
+        let simulate = await this.bundler.simulateHandleOp(ConvertedOP);
         if (simulate.status !== 0) {
             throw new Error(`error code:${simulate.status}`);
         }
 
         // get balance of accounts[1].address
         let finish = false
-        const bundlerEvent = bundler.sendUserOperation(ConvertedOP, 1000 * 60 * 5);
+        const bundlerEvent = this.bundler.sendUserOperation(ConvertedOP, 1000 * 60 * 5);
         bundlerEvent.on('error', (err: any) => {
             console.log(err);
         });

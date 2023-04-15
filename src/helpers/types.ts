@@ -26,18 +26,4 @@ export type Chain = {
   testnet?: boolean
 }
 
-export type ChainName =
-  | 'arbitrumOne'
-  | 'arbitrumRinkeby'
-  | 'avalanche'
-  | 'avalancheFuji'
-  | 'gnosis'
-  | 'goerli'
-  | 'kovan'
-  | 'mainnet'
-  | 'optimism'
-  | 'optimismKovan'
-  | 'polygonMainnet'
-  | 'polygonTestnetMumbai'
-  | 'rinkeby'
-  | 'ropsten'
+export type ChainName = 'polygonTestnetMumbai'

@@ -20,6 +20,7 @@
     "react-dom": "^17.0.2",
     "react-feather": "^2.0.9",
     "react-hot-toast": "^2.2.0",
+    "soul-wallet-lib": "github:proofofsoulprotocol/soulwalletlib#v0.1.0-alpha.32",
     "zustand": "^3.7.2",
     "zustand-persist": "^0.4.0"
   },

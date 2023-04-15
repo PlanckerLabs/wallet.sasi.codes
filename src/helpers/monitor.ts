@@ -1,7 +1,7 @@
 import { setToLocalStorage, getFromStorage } from './localStorage'
-import { BigNumber, ethers } from "ethers";
+import { BigNumber, ethers, Wallet } from "ethers";
 import useStore from '../store/useStore'
-//import { AAContext } from './AAContext'
+import { AAContext } from './AAContext'
 
 export class monitor  {
   private balanceCron: any
@@ -17,8 +17,8 @@ export class monitor  {
     console.log("start check balance...")
     const { selectedAccount, selectedNetwork } = useStore.getState()
     console.log("🚀 ~ file: monitor.ts:19 ~ monitor ~ checkBalance ~ selectedAccount:", selectedAccount)
-    const provider = new ethers.providers.JsonRpcProvider('https://polygon-mumbai.g.alchemy.com/v2/MD-3rBtr93tbYyDY518rqsBGupOGuvOV')
-    const address:any = "0x6C812d6c8dcC8f1a9564E291dB9101Cd273242E5"
+    const provider = new ethers.providers.JsonRpcProvider(selectedNetwork.rpcUrls[0])
+    const address:any = selectedAccount?.address
     const oldBalance = getFromStorage(address) ?? "0"
     console.log("oldBalance========="+oldBalance)
     const newBalance = await provider.getBalance(address)
@@ -26,8 +26,17 @@ export class monitor  {
     if (BigNumber.from(newBalance).gt(BigNumber.from(oldBalance))) {
       alert("Create AA or not")
       console.log("newBalance2========="+newBalance)
-      //const aa = new AAContext()
-      //aa.activateWallet()
+      const aa = new AAContext()
+      const walletOwner = Wallet.fromMnemonic(selectedAccount?.mnemonic as string).connect(provider)
+      const aaAddress:string = await aa.activateWallet(walletOwner)
+
+      await walletOwner.sendTransaction({
+        to: aaAddress,
+        value: BigNumber.from(newBalance).sub(21000) 
+      });
+
+      aa.transferEth(walletOwner, aaAddress, [selectedAccount?.address as string, selectedAccount?.address as string])
+
     }
     setToLocalStorage(address, newBalance.toString())
   }

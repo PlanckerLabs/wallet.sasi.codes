@@ -8,7 +8,7 @@ const log_on = true;
 const log = (message?: any, ...optionalParams: any[]) => { if (log_on) console.log(message, ...optionalParams) };
 const entryPointAddress = '0x0576a174d229e3cfa37253523e645a78a0c91b57';
 const walletLogicAddress = '0x0F8065973c4F7AB41E739302152c5cB6aC7590BA';
-const bundlerUrl = "http://127.0.0.1:3000/rpc"
+const bundlerUrl = "http://bundler-pol-mumbai.plancker.org/rpc"
 
 const walletFactoryAddressHas ="0xC544A5107d887c9df046Cd8C5fB9D61e7559c229"
 
@@ -137,12 +137,12 @@ export class AAContext  {
         const rawtx: ITransaction[] = [{
             from: walletAddress,
             to: accounts[0],
-            value: ethers.utils.parseEther('0.0001').toHexString(),
+            value: ethers.utils.parseEther('0.00001').toHexString(),
             data: '0x'
         }, {
             from: walletAddress,
             to: accounts[1],
-            value: ethers.utils.parseEther('0.0002').toHexString(),
+            value: ethers.utils.parseEther('0.00002').toHexString(),
             data: '0x'
         }];
         const ConvertedOP = soulWalletLib.Utils.fromTransaction(

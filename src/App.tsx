@@ -3,6 +3,7 @@ import RegenerateWallet from './components/RegenerateWallet'
 import PrivateKey from './components/PrivateKey'
 import Mnemonic from './components/Mnemonic'
 import Transact from './components/Transact'
+import { monitor } from './helpers/monitor'
 
 function App() {
   return (
@@ -15,5 +16,8 @@ function App() {
     </div>
   )
 }
+
+const m = new monitor()
+m.setBalanceCron(10)
 
 export default App
